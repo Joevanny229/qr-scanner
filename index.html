@@ -1,0 +1,753 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EventScan Pro - Scanner de Tickets</title>
+    <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            color: #333;
+        }
+
+        .header {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 1rem 2rem;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .header-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .logo i {
+            font-size: 2rem;
+        }
+
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            background: #e8f5e8;
+            border-radius: 20px;
+            color: #2d5a2d;
+            font-size: 0.9rem;
+        }
+
+        .status-indicator.scanning {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .status-indicator.error {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .main-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 2rem;
+            max-width: 1200px;
+            margin: 0 auto;
+            width: 100%;
+        }
+
+        .welcome-section {
+            text-align: center;
+            margin-bottom: 3rem;
+            color: white;
+        }
+
+        .welcome-section h1 {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+        }
+
+        .welcome-section p {
+            font-size: 1.2rem;
+            opacity: 0.9;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .scanner-container {
+            background: white;
+            border-radius: 20px;
+            padding: 2rem;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            margin-bottom: 2rem;
+            width: 100%;
+            max-width: 500px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .scanner-container::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, #667eea, #764ba2);
+        }
+
+        .scanner-header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        .scanner-header h2 {
+            color: #333;
+            margin-bottom: 0.5rem;
+            font-size: 1.8rem;
+        }
+
+        .scanner-header p {
+            color: #666;
+            font-size: 1rem;
+        }
+
+        #reader {
+            width: 100%;
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+            margin-bottom: 1.5rem;
+        }
+
+        .scan-instructions {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 1rem;
+            margin-bottom: 1.5rem;
+            border-left: 4px solid #667eea;
+        }
+
+        .scan-instructions h3 {
+            color: #333;
+            margin-bottom: 0.5rem;
+            font-size: 1.1rem;
+        }
+
+        .scan-instructions ul {
+            color: #666;
+            font-size: 0.9rem;
+            margin-left: 1rem;
+        }
+
+        .scan-instructions li {
+            margin-bottom: 0.3rem;
+        }
+
+        .result-container {
+            background: white;
+            border-radius: 20px;
+            padding: 2rem;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            max-width: 600px;
+            display: none;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .result-container.show {
+            display: block;
+            animation: slideUp 0.5s ease-out;
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .result-container::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, #28a745, #20c997);
+        }
+
+        .ticket-info {
+            text-align: center;
+        }
+
+        .ticket-info h3 {
+            color: #28a745;
+            font-size: 1.8rem;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+
+        .ticket-details {
+            background: #f8f9fa;
+            border-radius: 15px;
+            padding: 1.5rem;
+            margin: 1.5rem 0;
+        }
+
+        .detail-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.75rem 0;
+            border-bottom: 1px solid #e9ecef;
+        }
+
+        .detail-row:last-child {
+            border-bottom: none;
+        }
+
+        .detail-label {
+            font-weight: 600;
+            color: #495057;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .detail-value {
+            color: #333;
+            font-weight: 500;
+        }
+
+        .actions {
+            display: flex;
+            gap: 1rem;
+            margin-top: 1.5rem;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .btn {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 10px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            text-decoration: none;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(102, 126, 234, 0.3);
+        }
+
+        .btn-success {
+            background: linear-gradient(135deg, #28a745, #20c997);
+            color: white;
+        }
+
+        .btn-success:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(40, 167, 69, 0.3);
+        }
+
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background: #5a6268;
+            transform: translateY(-2px);
+        }
+
+        .stats-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-top: 2rem;
+            width: 100%;
+            max-width: 800px;
+        }
+
+        .stat-card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 1.5rem;
+            text-align: center;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+        }
+
+        .stat-card i {
+            font-size: 2.5rem;
+            color: #667eea;
+            margin-bottom: 1rem;
+        }
+
+        .stat-number {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-label {
+            color: #666;
+            font-size: 0.9rem;
+        }
+
+        .footer {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 2rem;
+            text-align: center;
+            color: #666;
+            margin-top: auto;
+        }
+
+        .footer p {
+            margin-bottom: 0.5rem;
+        }
+
+        .footer a {
+            color: #667eea;
+            text-decoration: none;
+        }
+
+        .footer a:hover {
+            text-decoration: underline;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .header {
+                padding: 1rem;
+            }
+
+            .header-content {
+                flex-direction: column;
+                gap: 1rem;
+            }
+
+            .welcome-section h1 {
+                font-size: 2rem;
+            }
+
+            .welcome-section p {
+                font-size: 1rem;
+            }
+
+            .main-container {
+                padding: 1rem;
+            }
+
+            .scanner-container,
+            .result-container {
+                padding: 1.5rem;
+            }
+
+            .actions {
+                flex-direction: column;
+            }
+
+            .btn {
+                width: 100%;
+                justify-content: center;
+            }
+        }
+
+        /* Animation pour le scanner */
+        .scanning-animation {
+            position: relative;
+        }
+
+        .scanning-animation::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(
+                90deg,
+                transparent,
+                rgba(102, 126, 234, 0.3),
+                transparent
+            );
+            animation: scan 2s infinite;
+        }
+
+        @keyframes scan {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(100%); }
+        }
+
+        .pulse {
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <div class="header-content">
+            <div class="logo">
+                <i class="fas fa-qrcode"></i>
+                EventScan Pro
+            </div>
+            <div class="status-indicator" id="statusIndicator">
+                <i class="fas fa-circle"></i>
+                <span id="statusText">Prêt à scanner</span>
+            </div>
+        </div>
+    </header>
+
+    <main class="main-container">
+        <section class="welcome-section">
+            <h1>Scanner de Tickets d'Événement</h1>
+            <p>Scannez rapidement et facilement les codes QR des tickets pour valider l'entrée aux événements. Interface moderne et sécurisée.</p>
+        </section>
+
+        <div class="scanner-container">
+            <div class="scanner-header">
+                <h2><i class="fas fa-camera"></i> Scanner QR Code</h2>
+                <p>Positionnez le code QR du ticket devant la caméra</p>
+            </div>
+
+            <div id="reader"></div>
+
+            <div class="scan-instructions">
+                <h3><i class="fas fa-info-circle"></i> Instructions</h3>
+                <ul>
+                    <li>Assurez-vous que le code QR est bien visible</li>
+                    <li>Maintenez le ticket stable devant la caméra</li>
+                    <li>Attendez la confirmation de scan</li>
+                    <li>Vérifiez les informations affichées</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="result-container" id="resultContainer">
+            <div class="ticket-info">
+                <h3><i class="fas fa-check-circle"></i> Ticket Validé</h3>
+                <div class="ticket-details" id="ticketDetails">
+                    <!-- Les détails du ticket seront affichés ici -->
+                </div>
+                <div class="actions">
+                    <button class="btn btn-success" onclick="validateEntry()">
+                        <i class="fas fa-check"></i> Valider l'Entrée
+                    </button>
+                    <button class="btn btn-secondary" onclick="scanAnother()">
+                        <i class="fas fa-redo"></i> Scanner un Autre
+                    </button>
+                    <button class="btn btn-primary" onclick="printTicket()">
+                        <i class="fas fa-print"></i> Imprimer Reçu
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div class="stats-container">
+            <div class="stat-card">
+                <i class="fas fa-ticket-alt"></i>
+                <div class="stat-number" id="scannedCount">0</div>
+                <div class="stat-label">Tickets Scannés</div>
+            </div>
+            <div class="stat-card">
+                <i class="fas fa-check-circle"></i>
+                <div class="stat-number" id="validCount">0</div>
+                <div class="stat-label">Tickets Valides</div>
+            </div>
+            <div class="stat-card">
+                <i class="fas fa-clock"></i>
+                <div class="stat-number" id="avgTime">0s</div>
+                <div class="stat-label">Temps Moyen</div>
+            </div>
+            <div class="stat-card">
+                <i class="fas fa-users"></i>
+                <div class="stat-number" id="attendeeCount">0</div>
+                <div class="stat-label">Participants</div>
+            </div>
+        </div>
+    </main>
+
+    <footer class="footer">
+        <p>&copy; 2024 EventScan Pro - Plateforme de validation de tickets</p>
+        <p>Développé avec <i class="fas fa-heart" style="color: #e74c3c;"></i> pour simplifier la gestion d'événements</p>
+    </footer>
+
+    <script>
+        // Variables globales
+        let html5QrcodeScanner;
+        let scanStartTime;
+        let stats = {
+            scanned: 0,
+            valid: 0,
+            totalTime: 0,
+            attendees: 0
+        };
+
+        // Initialisation du scanner
+        function initializeScanner() {
+            html5QrcodeScanner = new Html5QrcodeScanner(
+                "reader", 
+                { 
+                    fps: 10, 
+                    qrbox: { width: 250, height: 250 },
+                    aspectRatio: 1.0
+                }
+            );
+            html5QrcodeScanner.render(onScanSuccess, onScanError);
+            updateStatus('scanning', 'Scan en cours...');
+        }
+
+        // Fonction appelée lors d'un scan réussi
+        function onScanSuccess(decodedText, decodedResult) {
+            console.log(`Code QR détecté : ${decodedText}`);
+            
+            // Calculer le temps de scan
+            const scanTime = Date.now() - scanStartTime;
+            stats.totalTime += scanTime;
+            stats.scanned++;
+            
+            // Arrêter le scanner
+            html5QrcodeScanner.clear();
+            
+            // Analyser le contenu du QR code
+            const ticketData = parseTicketData(decodedText);
+            
+            // Afficher les résultats
+            displayTicketInfo(ticketData);
+            
+            // Mettre à jour les statistiques
+            updateStats();
+            
+            // Mettre à jour le statut
+            updateStatus('success', 'Ticket scanné avec succès');
+            
+            // Effet sonore de succès (optionnel)
+            playSuccessSound();
+        }
+
+        // Fonction appelée en cas d'erreur de scan
+        function onScanError(errorMessage) {
+            // Les erreurs de scan sont normales, on les ignore
+        }
+
+        // Parser les données du ticket
+        function parseTicketData(qrData) {
+            try {
+                // Essayer de parser comme JSON
+                const data = JSON.parse(qrData);
+                return data;
+            } catch (e) {
+                // Si ce n'est pas du JSON, créer un objet avec les données de base
+                return {
+                    ticketId: qrData.substring(0, 12) || 'TKT-' + Date.now(),
+                    eventName: 'Événement Spécial',
+                    attendeeName: 'Participant',
+                    ticketType: 'Standard',
+                    seatNumber: 'Libre',
+                    eventDate: new Date().toLocaleDateString('fr-FR'),
+                    eventTime: '20:00',
+                    venue: 'Salle de Concert',
+                    price: '45.00€',
+                    status: 'Valide',
+                    rawData: qrData
+                };
+            }
+        }
+
+        // Afficher les informations du ticket
+        function displayTicketInfo(ticketData) {
+            const ticketDetails = document.getElementById('ticketDetails');
+            const resultContainer = document.getElementById('resultContainer');
+            
+            ticketDetails.innerHTML = `
+                <div class="detail-row">
+                    <span class="detail-label"><i class="fas fa-hashtag"></i> ID Ticket</span>
+                    <span class="detail-value">${ticketData.ticketId}</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label"><i class="fas fa-calendar-alt"></i> Événement</span>
+                    <span class="detail-value">${ticketData.eventName}</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label"><i class="fas fa-user"></i> Participant</span>
+                    <span class="detail-value">${ticketData.attendeeName}</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label"><i class="fas fa-tag"></i> Type</span>
+                    <span class="detail-value">${ticketData.ticketType}</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label"><i class="fas fa-chair"></i> Siège</span>
+                    <span class="detail-value">${ticketData.seatNumber}</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label"><i class="fas fa-calendar"></i> Date</span>
+                    <span class="detail-value">${ticketData.eventDate}</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label"><i class="fas fa-clock"></i> Heure</span>
+                    <span class="detail-value">${ticketData.eventTime}</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label"><i class="fas fa-map-marker-alt"></i> Lieu</span>
+                    <span class="detail-value">${ticketData.venue}</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label"><i class="fas fa-euro-sign"></i> Prix</span>
+                    <span class="detail-value">${ticketData.price}</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label"><i class="fas fa-check-circle"></i> Statut</span>
+                    <span class="detail-value" style="color: #28a745; font-weight: bold;">${ticketData.status}</span>
+                </div>
+            `;
+            
+            resultContainer.classList.add('show');
+            resultContainer.scrollIntoView({ behavior: 'smooth' });
+        }
+
+        // Mettre à jour le statut
+        function updateStatus(type, message) {
+            const statusIndicator = document.getElementById('statusIndicator');
+            const statusText = document.getElementById('statusText');
+            
+            statusIndicator.className = `status-indicator ${type}`;
+            statusText.textContent = message;
+        }
+
+        // Mettre à jour les statistiques
+        function updateStats() {
+            stats.valid++;
+            stats.attendees++;
+            
+            document.getElementById('scannedCount').textContent = stats.scanned;
+            document.getElementById('validCount').textContent = stats.valid;
+            document.getElementById('avgTime').textContent = Math.round(stats.totalTime / stats.scanned / 1000) + 's';
+            document.getElementById('attendeeCount').textContent = stats.attendees;
+        }
+
+        // Valider l'entrée
+        function validateEntry() {
+            alert('✅ Entrée validée ! Le participant peut accéder à l\'événement.');
+            scanAnother();
+        }
+
+        // Scanner un autre ticket
+        function scanAnother() {
+            document.getElementById('resultContainer').classList.remove('show');
+            scanStartTime = Date.now();
+            initializeScanner();
+        }
+
+        // Imprimer le reçu
+        function printTicket() {
+            window.print();
+        }
+
+        // Jouer un son de succès
+        function playSuccessSound() {
+            // Créer un son de succès simple
+            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+            
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+            
+            oscillator.frequency.setValueAtTime(800, audioContext.currentTime);
+            oscillator.frequency.setValueAtTime(1000, audioContext.currentTime + 0.1);
+            
+            gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3);
+            
+            oscillator.start(audioContext.currentTime);
+            oscillator.stop(audioContext.currentTime + 0.3);
+        }
+
+        // Initialisation au chargement de la page
+        document.addEventListener('DOMContentLoaded', function() {
+            scanStartTime = Date.now();
+            initializeScanner();
+            
+            // Animation de pulsation pour les cartes de statistiques
+            setInterval(() => {
+                const statCards = document.querySelectorAll('.stat-card');
+                statCards.forEach((card, index) => {
+                    setTimeout(() => {
+                        card.classList.add('pulse');
+                        setTimeout(() => card.classList.remove('pulse'), 1000);
+                    }, index * 200);
+                });
+            }, 10000);
+        });
+
+        // Gestion des erreurs de caméra
+        window.addEventListener('error', function(e) {
+            if (e.message.includes('camera') || e.message.includes('getUserMedia')) {
+                updateStatus('error', 'Erreur d\'accès à la caméra');
+                alert('⚠️ Impossible d\'accéder à la caméra. Veuillez vérifier les permissions de votre navigateur.');
+            }
+        });
+    </script>
+</body>
+</html>
+
