@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Scanner un QR Code</title>
+  <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+</head>
+<body>
+  <h2>Scanner un QR Code</h2>
+  <div id="reader" style="width: 300px;"></div>
+  <p id="result"></p>
+
+  <script>
+    function onScanSuccess(decodedText, decodedResult) {
+      console.log(`Code QR détecté : ${decodedText}`);
+      document.getElementById('result').innerText = `Résultat : ${decodedText}`;
+      alert(`Code QR : ${decodedText}`);
+    }
+
+    function onScanError(errorMessage) {
+      // Erreurs ignorées
+    }
+
+    let html5QrcodeScanner = new Html5QrcodeScanner(
+      "reader", { fps: 10, qrbox: 200 });
+    html5QrcodeScanner.render(onScanSuccess, onScanError);
+  </script>
+</body>
+</html>
+
